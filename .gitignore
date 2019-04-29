@@ -106,3 +106,5 @@ images
 *.jpg
 *.html
 Untitled*
+
+*.csv
