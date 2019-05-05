@@ -1,6 +1,6 @@
 import pandas as pd
 from time import time
-from imgfeature import ImFeature
+from imgfeature import ImFeature, CropImFeature
 import argparse
 import gc
 
@@ -12,8 +12,9 @@ def get_input_args():
     return parser.parse_args()
 
 def genlongfp(start=0):
-    df = pd.read_csv('train_set.csv')
-    imf = ImFeature(k=50)
+    df = pd.read_csv('dataset.csv')
+    # imf = ImFeature(k=50)
+    imf = CropImFeature(k=50)
 
     fingerprints = list()
 

@@ -30,7 +30,30 @@ class PImQuery:
             sim = imsim.calcSim(fp2des(fp), des)
             if sim > 0.0001:
                 query_res.append((i, sim))
-        print('query cost time: {} s'.format(time() - start))
+        # print('query cost time: {} s'.format(time() - start))
 
         query_res = sorted(query_res, key=lambda x:x[1], reverse=True)
         return [(query_df.loc[item[0]].path, item[1]) for item in query_res]
+    def querySimIdxesByIdx(self, idx):
+        query_res = self.queryByIdx(idx)
+        return [s[0] for s in query_res if s[0] != idx]
+    def queryByIdx(self, idx):
+        imsim = self.imsim
+        short_df = self.short_df
+        long_df = self.long_df
+
+        short_hash = short_df.loc[idx]['hash_short']
+        query_df = long_df.loc[search_hash(short_df, short_hash).index]
+
+        des = fp2des(long_df.loc[idx]['fp_long'])
+        query_res = list()
+
+        start = time()
+        for fp, i in zip(query_df['fp_long'], query_df.index):
+            sim = imsim.calcSim(fp2des(fp), des)
+            if sim > 0.0001:
+                query_res.append((i, sim))
+        # print('query cost time: {} s'.format(time() - start))
+
+        query_res = sorted(query_res, key=lambda x:x[1], reverse=True)
+        return query_res

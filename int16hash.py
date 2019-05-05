@@ -71,6 +71,6 @@ def search_hash(df, fp_hash):
     for i, shash in enumerate(hash_shorts):
         if shash == fp_hash:
             hash_indexes.append(i)
-    print('search_hash cost time: {} s'.format(time() - start))
+    # print('search_hash cost time: {} s'.format(time() - start))
 
     return df.loc[hash_indexes]
