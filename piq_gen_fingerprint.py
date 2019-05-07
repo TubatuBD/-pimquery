@@ -1,6 +1,6 @@
 import pandas as pd
 from time import time
-from imgfeature import ImFeature, CropImFeature
+from piq_feature import ImFeature, CropImFeature
 import argparse
 import gc
 

@@ -1,4 +1,4 @@
-from imgfeature import ImSim
+from piq_feature import ImSim
 import numpy as np
 import pandas as pd
 from time import time
@@ -15,7 +15,7 @@ def loadsim(filename):
     return res
 
 print('load des data ...')
-load_des = loadsim('all_des.json')
+load_des = loadsim('data/piq_imdes.json')
 deslist = [np.array(des, dtype=np.uint8) for des in load_des]
 
 imsim = ImSim(k=50)
@@ -33,7 +33,7 @@ def findAllSimOfIndex(idx):
         if idx != i:
             des2 = deslist[i]
             sim = imsim.calcSim(des1, des2)
-            if sim > 0.0001:
+            if sim > 0.01:
                 sims.append(i)
     print('findAllSimOfIndex {} cost time: {}s'.format(idx, time() - start))
     return (idx, sims)
@@ -58,6 +58,8 @@ def simsN(N, allsims):
 
 if __name__ == '__main__':
     print('start gen test data ...')
-    allsims = loadsim('test_data.json')
-    allsims = simsN(663, allsims)
-    savesim(allsims, 'test_data.json')
+    allsims = loadsim('data/piq_test_data.json')
+    allsims = simsN(2000, allsims)
+    savesim(allsims, 'data/piq_test_data.json')
+    # allsims = querySimFrom(0, 1)
+    # savesim(allsims, 'data/piq_test_data.json')

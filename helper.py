@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from PIL import Image
 import numpy as np
+import json
 
 def showimg(image, ax=None, title=None):
     ''' image is a numpy.ndarray '''
@@ -35,3 +36,13 @@ def showsim(simimgs, figsize=(16, 12)):
         simimg = simimgs[i]
         im = Image.open(simimg['path'])
         showimg(np.asarray(im), ax=axs[i], title='Sim={} {}'.format(simimg['sim'], simimg['path']))
+
+def saveJson(data, json_file):
+    save_json = json.dumps(data)
+    with open(json_file, 'w') as f:
+        f.write(save_json)
+
+def loadJson(json_file):
+    with open(json_file, 'r') as f:
+        res = json.loads(f.readlines()[0])
+    return res

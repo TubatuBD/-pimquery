@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
-from int16hash import int16hash, search_hash
-from imgfeature import ImSim
+from piq_hash import PIQHash
+from piq_feature import ImSim
 from time import time
 
 def fp2des(fp):
@@ -9,51 +9,106 @@ def fp2des(fp):
     ut8arr = np.array([int(fp[i:i+2], 16) for i in range(0, len(fp), 2)], dtype=np.uint8)
     return ut8arr.reshape(kp_num, 32)
 
+def sims2repeats(sims):
+    firsts = list()
+    repeats = list()
+    res = list()
+    for sim in sims:
+        first = sim[0]
+        if first not in repeats:
+            for repeat in sim[1]:
+                if repeat not in repeats:
+                    repeats.append(repeat)
+                    res.append((repeat, first))
+            if first not in firsts:
+                firsts.append(first)
+    return res
+
 class PImQuery:
-    def __init__(self, short_csv, long_csv):
+    def __init__(self, hash_k=2, sim_threshold=0.01, df_hash=None, df_fp=None):
+        self.hash_k = hash_k
+        self.sim_threshold = sim_threshold
         self.imsim = ImSim(k=50)
-        self.short_df = pd.read_csv(short_csv)
-        self.long_df = pd.read_csv(long_csv)
-    def query(self, img_path):
+
+        if df_hash is None:
+            self.df_hash = pd.read_csv('data/piq_imhash_k{}.csv'.format(hash_k))
+        else:
+            self.df_hash = df_hash
+        if df_fp is None:
+            self.df_fp = pd.read_csv('data/piq_imfp.csv')
+        else:
+            self.df_fp = df_fp
+        self.piqhash = PIQHash(self.df_hash)
+    def feed(self, im):
+        pass
+    def findSims(self, im, by_hamming=False):
         imsim = self.imsim
-        short_df = self.short_df
-        long_df = self.long_df
+        piqhash = self.piqhash
+        hash_k = self.hash_k
+        sim_threshold = self.sim_threshold
 
-        short_hash = int16hash(img_path)[1]
-        query_df = long_df.loc[search_hash(short_df, short_hash).index]
+        # 获取具有相同hash值的数据 以在一个较小范围内通过图片指纹匹配相似的图片
+        # 可能会因为hash不能正确将所有重复的图片划分在一个集合，遗漏一些重复图片，最终导致召回率降低
+        imhash = piqhash.getHash(im, hash_k)
+        if by_hamming == True:
+            query_idxes = piqhash.queryHamming(imhash, hash_k)
+        else:
+            query_idxes = piqhash.query(imhash, hash_k)
+        query_df = self.df_fp.loc[query_idxes]
 
-        des = imsim.getFeature(img_path)[1]
+        # 图片指纹描述符
+        imdes = imsim.getFeature(im)[1]
+
         query_res = list()
-
-        start = time()
         for fp, i in zip(query_df['fp_long'], query_df.index):
-            sim = imsim.calcSim(fp2des(fp), des)
-            if sim > 0.0001:
+            sim = imsim.calcSim(fp2des(fp), imdes)
+            if sim > sim_threshold:
                 query_res.append((i, sim))
-        # print('query cost time: {} s'.format(time() - start))
 
-        query_res = sorted(query_res, key=lambda x:x[1], reverse=True)
-        return [(query_df.loc[item[0]].path, item[1]) for item in query_res]
-    def querySimIdxesByIdx(self, idx):
-        query_res = self.queryByIdx(idx)
-        return [s[0] for s in query_res if s[0] != idx]
-    def queryByIdx(self, idx):
+        # 按相似度大小返回经过排序的相似图片索引数组
+        return sorted(query_res, key=lambda x:x[1], reverse=True)
+    def findSimsByIdx(self, idx, by_hamming=False):
         imsim = self.imsim
-        short_df = self.short_df
-        long_df = self.long_df
+        piqhash = self.piqhash
+        hash_k = self.hash_k
+        sim_threshold = self.sim_threshold
 
-        short_hash = short_df.loc[idx]['hash_short']
-        query_df = long_df.loc[search_hash(short_df, short_hash).index]
+        # 获取具有相同hash值的数据 以在一个较小范围内通过图片指纹匹配相似的图片
+        # 可能会因为hash不能正确将所有重复的图片划分在一个集合，遗漏一些重复图片，最终导致召回率降低
+        imhash = self.df_hash.loc[idx]['hash_k' + str(hash_k)]
+        if by_hamming == True:
+            query_idxes = piqhash.queryHamming(imhash, hash_k)
+        else:
+            query_idxes = piqhash.query(imhash, hash_k)
+        query_df = self.df_fp.loc[query_idxes]
 
-        des = fp2des(long_df.loc[idx]['fp_long'])
+        # 图片指纹描述符
+        imdes = fp2des(self.df_fp.loc[idx]['fp_long'])
+
         query_res = list()
-
-        start = time()
         for fp, i in zip(query_df['fp_long'], query_df.index):
-            sim = imsim.calcSim(fp2des(fp), des)
-            if sim > 0.0001:
+            sim = imsim.calcSim(fp2des(fp), imdes)
+            if sim > sim_threshold:
                 query_res.append((i, sim))
-        # print('query cost time: {} s'.format(time() - start))
 
-        query_res = sorted(query_res, key=lambda x:x[1], reverse=True)
-        return query_res
+        # 按相似度大小返回经过排序的相似图片索引数组
+        return sorted(query_res, key=lambda x:x[1], reverse=True)
+    def query(self, im, by_hamming=False):
+        # start = time()
+        query_res = self.findSims(im, by_hamming)
+        # print('query cost time: {} s'.format(time() - start))
+        return [item[0] for item in query_res]
+    def queryByIdx(self, idx, by_hamming=False):
+        query_res = self.findSimsByIdx(idx, by_hamming)
+
+        return [item[0] for item in query_res if item[0] != idx]
+    def findRepeats(self, max=None, by_hamming=False):
+        num = self.df_fp.shape[0]
+        if (max is not None) and max < num:
+            num = max
+        sims = list()
+        for i in range(num):
+            idxs = self.queryByIdx(i, by_hamming=by_hamming)
+            if len(idxs) > 0:
+                sims.append((i, idxs))
+        return sims2repeats(sims)
