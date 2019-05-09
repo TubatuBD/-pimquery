@@ -25,7 +25,7 @@ def sims2repeats(sims):
     return res
 
 class PImQuery:
-    def __init__(self, hash_k=2, sim_threshold=0.01, df_hash=None, df_fp=None):
+    def __init__(self, hash_k=2, sim_threshold=0.16, df_hash=None, df_fp=None):
         self.hash_k = hash_k
         self.sim_threshold = sim_threshold
         self.imsim = ImSim(k=50)
@@ -39,8 +39,6 @@ class PImQuery:
         else:
             self.df_fp = df_fp
         self.piqhash = PIQHash(self.df_hash)
-    def feed(self, im):
-        pass
     def findSims(self, im, by_hamming=False):
         imsim = self.imsim
         piqhash = self.piqhash
@@ -112,3 +110,27 @@ class PImQuery:
             if len(idxs) > 0:
                 sims.append((i, idxs))
         return sims2repeats(sims)
+    def predict_test(self, train_set, test_set):
+        imsim = self.imsim
+        sim_threshold = self.sim_threshold
+
+        train_fp = self.df_fp.loc[train_set]
+        train_hash = self.df_hash.loc[train_set]
+
+        predict_res = list()
+        for test_index in test_set:
+            test_des = fp2des(self.df_fp.loc[test_index, 'fp_long'])
+            test_hash = self.df_hash.loc[test_index, 'hash_k2']
+            query_fp = train_fp.loc[train_hash[train_hash.hash_k2 == test_hash].index]
+
+            repeat = 0
+            simto = 0
+            sim = 0
+            for fp, i in zip(query_fp['fp_long'], query_fp.index):
+                sim = imsim.calcSim(fp2des(fp), test_des)
+                if sim > sim_threshold:
+                    repeat = 1
+                    simto = i
+                    break
+            predict_res.append((repeat, simto, sim))
+        return list(zip(*predict_res))

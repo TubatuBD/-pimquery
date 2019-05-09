@@ -162,12 +162,14 @@ class ResizeImFeature(CropImFeature):
         return bgr, self.resize(gray, size=size)
 
 class ImSim:
-    def __init__(self, k=500, resize=False):
+    def __init__(self, k=500, resize=False, crop=True):
         self.k = k
         if resize == True:
             self.feature = ResizeImFeature(k=k)
-        else:
+        elif crop == True:
             self.feature = CropImFeature(k=k)
+        else:
+            self.feature = ImFeature(k=k)
     def match(self, img1, img2):
         matches = self.feature.flannMatch(img1, img2)
         return sorted([match for match in matches if match.distance < 10], key=lambda x:x.distance)

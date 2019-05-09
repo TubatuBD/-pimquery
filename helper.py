@@ -23,6 +23,12 @@ def showimg(image, ax=None, title=None):
     # plt.pause(0.001)
     return ax
 
+def showimg_by_path(imgs):
+    _, axs = plt.subplots(1, len(imgs), figsize=(16, 12))
+    for i in range(len(imgs)):
+        im = np.asarray(Image.open(imgs[i]))
+        showimg(im, ax=axs[i], title=imgs[i])
+
 def showsim(simimgs, figsize=(16, 12)):
     num = len(simimgs)
     if num == 1:

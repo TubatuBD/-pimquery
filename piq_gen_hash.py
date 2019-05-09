@@ -1,5 +1,5 @@
 from piq_feature import ResizeImFeature
-from piq_hash import imhash
+from piq_hash import imhash_dct
 from time import time
 import pandas as pd
 
@@ -15,7 +15,7 @@ def genhash(df, k):
 
     for img_path in img_paths:
         bgr, gray = imf_resize.read(img_path, size)
-        fp_hash = imhash(gray)
+        fp_hash = imhash_dct(gray)
         fp_hashes.append(fp_hash)
 
     print('cost time: {}s'.format(time() - start))
@@ -32,4 +32,4 @@ def genhash_batch(batches):
         dataset[['path', 'hash_k{}'.format(k)]].to_csv('data/piq_imhash_k{}.csv'.format(k), index=False)
 
 if __name__ == '__main__':
-    genhash_batch([3, 5, 7, 9])
+    genhash_batch([2])

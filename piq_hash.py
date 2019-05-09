@@ -1,6 +1,8 @@
 from time import time
 from piq_feature import ResizeImFeature
 import pandas as pd
+import numpy as np
+import cv2 as cv
 
 def imhash(gray):
     dt = gray.flatten()
@@ -8,6 +10,15 @@ def imhash(gray):
     avg = dt.mean()
     avg_list = ['0' if i < avg else '1' for i in dt]
     return ''.join(['%x' % int(''.join(avg_list[x: x+4]), 2) for x in range(0, xlen, 4)])
+
+def imhash_dct(gray):
+    h, w = gray.shape[:2]
+    vis0 = np.zeros((h,w), np.float32)
+    vis0[:h,:w] = gray       #填充数据
+
+    vis1 = cv.dct(cv.dct(vis0))
+
+    return imhash(vis1)
 
 def hamming(hash1, hash2):
     len1 = len(hash1)
@@ -38,7 +49,7 @@ class PIQHash:
             bgr, gray = self.imf_resize.read(im, hash_k * 2)
         else:
             gray = im
-        return imhash(gray)
+        return imhash_dct(gray)
     def query(self, hash, hash_k):
         hashes = self.df_hash['hash_k' + str(hash_k)]
         res = list()
