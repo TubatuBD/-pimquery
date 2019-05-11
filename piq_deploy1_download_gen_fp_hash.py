@@ -25,6 +25,9 @@ def get_input_args():
     parser.add_argument('--file', type=str, default='case_struct', 
                         help='batch size')
 
+    parser.add_argument('--timeout', type=float, default=1.0, 
+                        help='single download timeout')
+
     return parser.parse_args()
 
 def download_img_by_filename(filename, timeout=3, bgr=False, gray_func=None, proc_func=None):
@@ -65,7 +68,7 @@ def download_from_df(df, start=0, size=10000, timeout=1, bgr=False, gray_func=No
             failed_down.append([i, str(cid), str(ID), filename])
             continue
     if len(failed_down) > 0:
-        saveJson(failed_down, 'data/{}_{}-{}.json'.format(failed_filename + '_down_failed', start, start+size-1))
+        saveJson(failed_down, 'data/deploy/download_failed/{}_{}-{}.json'.format(failed_filename, start, start+size-1))
     return res
 
 def gen_batch(start, size):
@@ -100,7 +103,7 @@ def gen_batch(start, size):
     print('completed!')
 
 class ImgDownLoader:
-    def __init__(self, id_name='tid', csv_filename='case_struct'):
+    def __init__(self, id_name='tid', csv_filename='case_struct', timeout=1):
         print('init loader for {}:\n'.format(csv_filename))
         self.imf = ImFeature(k=50)
         self.imf_crop = CropImFeature(k=50)
@@ -112,13 +115,14 @@ class ImgDownLoader:
         self.df = origin_dataset[origin_dataset.filename != '\\N'].sort_values(by=['cid', 'puttime'])
         self.id_name = id_name
         self.filename = csv_filename
+        self.timeout = timeout
     def run(self, start, size):
         proc_func = [self.gen_hash, self.gen_fp]
         print('download from {} to {} ...'.format(start, start + size - 1))
         start_time = time()
-        res = download_from_df(self.df, start=start, size=size, bgr=True, gray_func=self.bgr2gray, proc_func=proc_func, id_name=self.id_name, failed_filename=self.filename)
+        res = download_from_df(self.df, start=start, size=size, timeout=self.timeout, bgr=True, gray_func=self.bgr2gray, proc_func=proc_func, id_name=self.id_name, failed_filename=self.filename)
         print('download cost time {} h.'.format((time() - start_time)/3600))
-        res_json = 'data/{}_img_hash_fp_{}-{}.json'.format(self.filename, start, start+size-1)
+        res_json = 'data/deploy/download/{}_{}-{}.json'.format(self.filename, start, start+size-1)
         print('save to {}.'.format(res_json))
         saveJson(res, res_json)
         print('done.')
@@ -136,5 +140,5 @@ class ImgDownLoader:
 
 if __name__ == '__main__':
     in_arg = get_input_args()
-    loader = ImgDownLoader(id_name=in_arg.id, csv_filename=in_arg.file)
+    loader = ImgDownLoader(id_name=in_arg.id, csv_filename=in_arg.file, timeout=in_arg.timeout)
     loader.run_batch(start=in_arg.start, size=in_arg.size, batch_size=in_arg.batch)
